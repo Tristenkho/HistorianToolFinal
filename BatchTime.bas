@@ -1,57 +1,70 @@
 Attribute VB_Name = "BatchTime"
-Sub ExtractBatchTimesFromWI()
+Option Explicit
+
+' Map any WI header to a simple reactor label
+Private Function ReactorLabel(ByVal header As String) As String
+    Dim s As String: s = UCase$(Trim$(header))
+    s = Replace(s, " ", "")
+    ' easy prefixes like R1_WI_01.Val, R2WI, etc.
+    If Left$(s, 2) = "R1" Then ReactorLabel = "R1": Exit Function
+    If Left$(s, 2) = "R2" Then ReactorLabel = "R2": Exit Function
+    If Left$(s, 2) = "R3" Then ReactorLabel = "R3": Exit Function
+    If Left$(s, 2) = "R4" Then ReactorLabel = "R4": Exit Function
+    ' fallback: look anywhere
+    If InStr(s, "R1") > 0 Then ReactorLabel = "R1": Exit Function
+    If InStr(s, "R2") > 0 Then ReactorLabel = "R2": Exit Function
+    If InStr(s, "R3") > 0 Then ReactorLabel = "R3": Exit Function
+    If InStr(s, "R4") > 0 Then ReactorLabel = "R4": Exit Function
+    ReactorLabel = header
+End Function
+
+Public Sub ExtractBatchTimesFromWI()
     Dim ws As Worksheet, summaryWs As Worksheet
-    Dim lastRow As Long, Col As Long, outputRow As Long
+    Dim lastRow As Long, col As Long, outputRow As Long
     Dim i As Long
     Dim wiValue As Double, prevValue As Double
     Dim batchStartTime As Variant, batchEndTime As Variant
     Dim started As Boolean
 
-    ' Set your data worksheet
     Set ws = ThisWorkbook.Sheets("Paste Data")
 
-    ' Create or clear the summary sheet
+    ' Ensure/prepare summary sheet WITHOUT clearing existing rows (so R4 stays)
     On Error Resume Next
     Set summaryWs = ThisWorkbook.Sheets("Batch Summary")
+    On Error GoTo 0
     If summaryWs Is Nothing Then
         Set summaryWs = ThisWorkbook.Sheets.Add(After:=ws)
         summaryWs.name = "Batch Summary"
-    Else
-        summaryWs.Cells.ClearContents
     End If
-    On Error GoTo 0
+    ' Ensure headers (A..G to match KOV runner expectations; G=Product left blank)
+    If summaryWs.Cells(1, 1).value <> "Tag" Then
+        summaryWs.Range("A1:G1").value = Array("Tag", "Batch Start", "Batch End", _
+                                               "Duration (min)", "Duration (hr)", "Status", "Product")
+    End If
+    ' Append to first empty row
+    outputRow = summaryWs.Cells(summaryWs.rows.Count, 1).End(xlUp).Row + 1
 
-    ' Set headers in the summary sheet
-    summaryWs.Range("A1:F1").value = Array("Tag", "Batch Start", "Batch End", "Duration (min)", "Duration (hr)", "Status")
-    outputRow = 2
-
-    ' Find last row of data
-    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    lastRow = ws.Cells(ws.rows.Count, 1).End(xlUp).Row
     If lastRow < 3 Then
         MsgBox "Not enough rows in Paste Data.", vbExclamation
         Exit Sub
     End If
 
-    ' Parameters
     Const thresh As Double = 1000
-    Const HOLD_MIN As Double = 300
+    Const HOLD_MIN As Double = 300   ' minutes
 
-    ' Loop through each column to find WI tags
-    For Col = 2 To ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
-        If InStr(1, ws.Cells(1, Col).value, "WI", vbTextCompare) > 0 Then
+    For col = 2 To ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
+        If InStr(1, ws.Cells(1, col).value, "WI", vbTextCompare) > 0 Then
 
-            ' --- per-tag state ---
             started = False
-            prevValue = ws.Cells(2, Col).value
+            prevValue = ws.Cells(2, col).value
             batchStartTime = Empty
             batchEndTime = Empty
 
-            ' hold tracking
-            Dim holdAcc As Double: holdAcc = 0          ' minutes accumulated >THRESH
-            Dim startCandIdx As Long: startCandIdx = 0  ' row index of first >THRESH in current run
+            Dim holdAcc As Double: holdAcc = 0
+            Dim startCandIdx As Long: startCandIdx = 0
             Dim startedBeforeData As Boolean: startedBeforeData = False
 
-            ' >>> Seed candidate if series begins above threshold
             If prevValue > thresh Then
                 startCandIdx = 2
                 holdAcc = 0
@@ -59,9 +72,9 @@ Sub ExtractBatchTimesFromWI()
             End If
 
             For i = 3 To lastRow
-                wiValue = ws.Cells(i, Col).value
+                wiValue = ws.Cells(i, col).value
 
-                ' === START DETECTION WITH HOLD ===
+                ' --- START with hold ---
                 If Not started Then
                     If wiValue > thresh Then
                         If startCandIdx = 0 And prevValue <= thresh Then
@@ -84,12 +97,12 @@ Sub ExtractBatchTimesFromWI()
                     End If
                 End If
 
-                ' === END DETECTION (unchanged logic) ===
+                ' --- END on falling back below threshold ---
                 If started Then
                     If wiValue <= thresh And prevValue > thresh Then
                         batchEndTime = ws.Cells(i, 1).value
 
-                        summaryWs.Cells(outputRow, 1).value = ws.Cells(1, Col).value
+                        summaryWs.Cells(outputRow, 1).value = ReactorLabel(ws.Cells(1, col).value) ' << normalize
                         summaryWs.Cells(outputRow, 3).value = batchEndTime
 
                         If IsDate(batchStartTime) Then
@@ -98,12 +111,14 @@ Sub ExtractBatchTimesFromWI()
                             summaryWs.Cells(outputRow, 5).value = Round(DateDiff("s", batchStartTime, batchEndTime) / 3600, 2)
                             summaryWs.Cells(outputRow, 6).value = "Complete"
                         Else
-                            ' Started before data (or non-date label)
                             summaryWs.Cells(outputRow, 2).value = "Started before data"
                             summaryWs.Cells(outputRow, 4).value = DateDiff("n", ws.Cells(2, 1).value, batchEndTime)
                             summaryWs.Cells(outputRow, 5).value = Round(DateDiff("s", ws.Cells(2, 1).value, batchEndTime) / 3600, 2)
                             summaryWs.Cells(outputRow, 6).value = "Partial Start"
                         End If
+
+                        summaryWs.Cells(outputRow, 2).NumberFormat = "m/dd/yyyy hh:mm"
+                        summaryWs.Cells(outputRow, 3).NumberFormat = "m/dd/yyyy hh:mm"
 
                         outputRow = outputRow + 1
                         started = False
@@ -116,9 +131,9 @@ Sub ExtractBatchTimesFromWI()
                 prevValue = wiValue
             Next i
 
-            ' Handle batch still running at end of dataset
+            ' --- tail cases ---
             If started Then
-                summaryWs.Cells(outputRow, 1).value = ws.Cells(1, Col).value
+                summaryWs.Cells(outputRow, 1).value = ReactorLabel(ws.Cells(1, col).value)
                 summaryWs.Cells(outputRow, 3).value = "Ends after data"
 
                 If IsDate(batchStartTime) Then
@@ -132,12 +147,11 @@ Sub ExtractBatchTimesFromWI()
                     summaryWs.Cells(outputRow, 5).value = Round(DateDiff("s", ws.Cells(2, 1).value, ws.Cells(lastRow, 1).value) / 3600, 2)
                     summaryWs.Cells(outputRow, 6).value = "Started before data + Ends after data"
                 End If
-
+                summaryWs.Cells(outputRow, 2).NumberFormat = "m/dd/yyyy hh:mm"
                 outputRow = outputRow + 1
 
-            ' >>> Optional: series was above threshold but hold never confirmed before EOF
             ElseIf (startCandIdx > 0 Or prevValue > thresh) Then
-                summaryWs.Cells(outputRow, 1).value = ws.Cells(1, Col).value
+                summaryWs.Cells(outputRow, 1).value = ReactorLabel(ws.Cells(1, col).value)
                 summaryWs.Cells(outputRow, 2).value = "Started before data or hold<" & HOLD_MIN & "m not confirmed"
                 summaryWs.Cells(outputRow, 3).value = "Ends after data"
                 summaryWs.Cells(outputRow, 4).value = DateDiff("n", ws.Cells(2, 1).value, ws.Cells(lastRow, 1).value)
@@ -147,9 +161,10 @@ Sub ExtractBatchTimesFromWI()
             End If
 
         End If
-    Next Col
+    Next col
 
-    MsgBox "Batch times extracted to 'Batch Summary' sheet.", vbInformation
+    summaryWs.Columns("A:G").AutoFit
+    MsgBox "Batch times appended to 'Batch Summary'.", vbInformation
 End Sub
 
 Private Function FindHoldBelow_FromSheet(ws As Worksheet, cT As Long, cCol As Long, _
