@@ -90,7 +90,7 @@ Private Sub Run_11658(ByVal PRODUCT_NAME As String)
 
     ' ---- output header ----
     wsK.Cells.ClearContents
-    wsK.Range("A1:F1").value = Array("Product", "Role", "Tags found in Paste Data", "N", "Max?", "StdDev")
+    wsK.Range("A1:F1").value = Array("Product", "Role", "Tags used", "N", "Max", "StdDev")
     wsK.Range("A2").value = PRODUCT_NAME
     Dim rr As Long: rr = 2
     rr = PrintRoleSummary(wsK, rr, ROLE_TT, roleTags, nTT, dTT, vTT, PRODUCT_NAME)
@@ -98,7 +98,7 @@ Private Sub Run_11658(ByVal PRODUCT_NAME As String)
     rr = PrintRoleSummary(wsK, rr, ROLE_CFT, roleTags, nCFT, dCFT, vCFT)
 
     rr = rr + 2
-    wsK.Rows(rr - 1).RowHeight = 8
+    wsK.rows(rr - 1).RowHeight = 8
     wsK.Range("A" & rr & ":L" & rr).value = Array("Stage", "Start Time", "End Time", "Metric", "Value", "Min", "TV", "Max", "Result", "# from TV", "Label", "Notes")
     wsK.Range("A" & rr & ":L" & rr).Font.Bold = True
     rr = rr + 1
@@ -203,7 +203,7 @@ Private Sub Run_C9283(ByVal PRODUCT_NAME As String)
 
     ' ---- output header ----
     wsK.Cells.ClearContents
-    wsK.Range("A1:F1").value = Array("Product", "Role", "Tags found in Paste Data", "N", "Max?", "StdDev")
+    wsK.Range("A1:F1").value = Array("Product", "Role", "Tags used", "N", "Max", "StdDev")
     wsK.Range("A2").value = PRODUCT_NAME
     Dim rr As Long: rr = 2
     rr = PrintRoleSummary(wsK, rr, ROLE_TT, roleTags, nTT, dTT, vTT, PRODUCT_NAME)
@@ -211,7 +211,7 @@ Private Sub Run_C9283(ByVal PRODUCT_NAME As String)
     rr = PrintRoleSummary(wsK, rr, ROLE_AFT, roleTags, nAFT, dAFT, vAFT)
 
     rr = rr + 2
-    wsK.Rows(rr - 1).RowHeight = 8
+    wsK.rows(rr - 1).RowHeight = 8
     wsK.Range("A" & rr & ":L" & rr).value = Array("Stage", "Start Time", "End Time", "Metric", "Value", "Min", "TV", "Max", "Result", "# from TV", "Label", "Notes")
     wsK.Range("A" & rr & ":L" & rr).Font.Bold = True
     rr = rr + 1
@@ -295,7 +295,7 @@ Private Function HeaderCol(hdr As Object, key As String) As Long
 End Function
 
 Private Function BuildTimeVector(ws As Worksheet, ByVal cTime As Long, ByRef t() As Double, ByRef n As Long) As Boolean
-    Dim lastRow As Long: lastRow = ws.Cells(ws.Rows.Count, cTime).End(xlUp).Row
+    Dim lastRow As Long: lastRow = ws.Cells(ws.rows.Count, cTime).End(xlUp).Row
     If lastRow < 3 Then Exit Function
     n = lastRow - 1
     ReDim t(1 To n)
@@ -355,7 +355,7 @@ Private Function GroupTagsByRole_Explicit(wsMap As Worksheet, ByVal product As S
     Set d(ROLE_AFT) = New Collection
     Set d(ROLE_CFT) = New Collection
 
-    Dim lastRow As Long: lastRow = wsMap.Cells(wsMap.Rows.Count, 1).End(xlUp).Row
+    Dim lastRow As Long: lastRow = wsMap.Cells(wsMap.rows.Count, 1).End(xlUp).Row
     Dim r As Long, prod$, tag$, role$, tagHeader$
 
     For r = 2 To lastRow

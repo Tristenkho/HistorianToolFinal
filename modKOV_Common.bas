@@ -36,7 +36,7 @@ Public Function CompositeMedian_AndStats( _
         If c > 0 Then
             Dim s() As Double: ReDim s(1 To n)
             For i = 1 To n
-                s(i) = CDbl(Val(wsData.Cells(i + 1, c).value))
+                s(i) = CDbl(val(wsData.Cells(i + 1, c).value))
             Next i
             series.Add s
         End If
@@ -111,7 +111,7 @@ nope:
     SeriesExists = False
 End Function
 
-Public Function TrimmedMeanTW(ByRef y() As Double, ByRef t() As Double, _
+Public Function TrimmedMeanTW(ByRef Y() As Double, ByRef t() As Double, _
                               ByVal i0 As Long, ByVal i1 As Long, _
                               ByVal trimIn As Double, ByVal trimOut As Double) As Double
     If i1 <= i0 Then Exit Function
@@ -126,18 +126,18 @@ Public Function TrimmedMeanTW(ByRef y() As Double, ByRef t() As Double, _
         If t(i) <= s0 Or t(i - 1) >= s1 Then
             ' outside trimmed window
         Else
-            yMid = (y(i) + y(i - 1)) / 2#
+            yMid = (Y(i) + Y(i - 1)) / 2#
             If t(i) <= s1 And t(i - 1) >= s0 Then
                 num = num + dt * yMid
                 den = den + dt
             Else
-                Dim tA As Double, tB As Double, dt2 As Double
+                Dim tA As Double, tB As Double, dT2 As Double
                 tA = Application.Max(t(i - 1), s0)
-                tB = Application.min(t(i), s1)
-                dt2 = MinutesBetween(tA, tB)
-                If dt2 > 0 Then
-                    num = num + dt2 * yMid
-                    den = den + dt2
+                tB = Application.Min(t(i), s1)
+                dT2 = MinutesBetween(tA, tB)
+                If dT2 > 0 Then
+                    num = num + dT2 * yMid
+                    den = den + dT2
                 End If
             End If
         End If
@@ -145,7 +145,7 @@ Public Function TrimmedMeanTW(ByRef y() As Double, ByRef t() As Double, _
     If den > 0 Then TrimmedMeanTW = num / den
 End Function
 
-Public Function TimeWeightedMeanWindow(ByRef y() As Double, ByRef t() As Double, _
+Public Function TimeWeightedMeanWindow(ByRef Y() As Double, ByRef t() As Double, _
                                        ByVal i0 As Long, ByVal i1 As Long, _
                                        ByVal nullZero As Double) As Double
     If i1 <= i0 Then Exit Function
@@ -153,8 +153,8 @@ Public Function TimeWeightedMeanWindow(ByRef y() As Double, ByRef t() As Double,
     For i = i0 + 1 To i1
         dt = MinutesBetween(t(i - 1), t(i))
         If dt < 0 Then dt = 0
-        If y(i) <> nullZero And y(i - 1) <> nullZero Then
-            num = num + dt * (y(i) + y(i - 1)) / 2#
+        If Y(i) <> nullZero And Y(i - 1) <> nullZero Then
+            num = num + dt * (Y(i) + Y(i - 1)) / 2#
             den = den + dt
         End If
     Next i
@@ -220,7 +220,7 @@ Private Function GetLimit_ByStepExact( _
     s = LCase$(Trim$(stepName))
     v = LCase$(Trim$(varKey))
 
-    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    lastRow = ws.Cells(ws.rows.Count, 1).End(xlUp).Row
     For r = 2 To lastRow
         If LCase$(Trim$(CStr(ws.Cells(r, 1).value))) = p _
         And LCase$(Trim$(CStr(ws.Cells(r, 2).value))) = s _
@@ -237,9 +237,9 @@ Private Function GetLimit_ByStepExact( _
             hasTV = (Len(sTV) > 0)
             hasMax = (Len(sMax) > 0)
 
-            If hasMin Then vMin = CDbl(Val(sMin)) Else vMin = 0
-            If hasTV Then vTV = CDbl(Val(sTV)) Else vTV = 0
-            If hasMax Then vMax = CDbl(Val(sMax)) Else vMax = 0
+            If hasMin Then vMin = CDbl(val(sMin)) Else vMin = 0
+            If hasTV Then vTV = CDbl(val(sTV)) Else vTV = 0
+            If hasMax Then vMax = CDbl(val(sMax)) Else vMax = 0
 
             GetLimit_ByStepExact = True
             Exit Function
@@ -300,7 +300,7 @@ Public Sub KOV_ColorizeAllTables(ByVal ws As Worksheet)
     Dim lastRow As Long, r As Long, v As String
     If ws Is Nothing Then Exit Sub
 
-    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    lastRow = ws.Cells(ws.rows.Count, 1).End(xlUp).Row
     If lastRow < 2 Then Exit Sub
 
     ' Clear any prior fill/fonts in key columns
@@ -394,7 +394,7 @@ Public Function GroupTagsByRole_Explicit(wsMap As Worksheet, ByVal product As St
         Set d(rName) = New Collection
     Next
 
-    Dim lastRow As Long: lastRow = wsMap.Cells(wsMap.Rows.Count, 1).End(xlUp).Row
+    Dim lastRow As Long: lastRow = wsMap.Cells(wsMap.rows.Count, 1).End(xlUp).Row
     Dim r As Long, prod$, tag$, role$, tagHeader$
 
     For r = 2 To lastRow

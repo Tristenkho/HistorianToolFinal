@@ -60,26 +60,39 @@ Private Sub KOV_Run_Impl()
     Set wsK = wb.Worksheets(SH_KOV)
     On Error GoTo 0
 
-    If wsUI Is Nothing Or wsData Is Nothing Or wsMap Is Nothing _
-       Or wsSoak Is Nothing Or wsStrip Is Nothing Or wsLim Is Nothing Then
-        MsgBox "Missing sheet(s). Need: UI, Paste Data, Tag Map, KOV Soak, KOV Strip, Product Limits.", vbCritical
-        Exit Sub
-    End If
+If wsData Is Nothing Or wsMap Is Nothing _
+   Or wsSoak Is Nothing Or wsStrip Is Nothing Or wsLim Is Nothing Then
+    MsgBox "Missing sheet(s). Need: Paste Data, Tag Map, KOV Soak, KOV Strip, Product Limits.", vbCritical
+    Exit Sub
+End If
+' wsUI is allowed to be Nothing now
+
     If wsK Is Nothing Then
         Set wsK = wb.Worksheets.Add(After:=wsData)
         wsK.name = SH_KOV
     End If
 
-    Dim product As String
-    If Len(G_SELECTED_PRODUCT) > 0 Then
-        product = G_SELECTED_PRODUCT
-    Else
-        product = Trim$(CStr(wsUI.Range("B1").value))
-    End If
-    If Len(product) = 0 Then
-        MsgBox "Pick a Product in UI!B1.", vbExclamation
-        Exit Sub
-    End If
+Dim product As String
+
+If Len(G_SELECTED_PRODUCT) > 0 Then
+    ' KOV Multi / windowed runs set this
+    product = G_SELECTED_PRODUCT
+
+ElseIf Not wsUI Is Nothing Then
+    ' Optional: still support the old single-product UI flow
+    product = Trim$(CStr(wsUI.Range("B1").value))
+
+Else
+    MsgBox "No product specified. Run from KOV Multi (which sets G_SELECTED_PRODUCT) " & _
+           "or create a UI sheet with the product in B1.", vbExclamation
+    Exit Sub
+End If
+
+If Len(product) = 0 Then
+    MsgBox "No product specified. Please set G_SELECTED_PRODUCT (via KOV Multi) " & _
+           "or enter a product in UI!B1.", vbExclamation
+    Exit Sub
+End If
 
     Dim oldCalc As XlCalculation: oldCalc = Application.Calculation
     Application.ScreenUpdating = False
@@ -96,7 +109,7 @@ Private Sub KOV_Run_Impl()
     Dim roleTags As Object: Set roleTags = GroupTagsByRole(wsMap, product, hdr)
 
     '---- time vector ----
-    Dim lastRow As Long: lastRow = wsData.Cells(wsData.Rows.Count, 1).End(xlUp).Row
+    Dim lastRow As Long: lastRow = wsData.Cells(wsData.rows.Count, 1).End(xlUp).Row
     If lastRow < 3 Then Err.Raise 5, , "No data in 'Paste Data'."
     Dim n As Long: n = lastRow - 1
     Dim t() As Double: ReDim t(1 To n)
@@ -176,19 +189,19 @@ End Sub
 '======================== CONFIG LOADERS =====================
 Private Function LoadSoakCfg(ws As Worksheet, ByVal product As String, ByRef c As SoakCfg) As Boolean
     Dim r As Long, lastRow As Long
-    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    lastRow = ws.Cells(ws.rows.Count, 1).End(xlUp).Row
     For r = 2 To lastRow
         If StrComp(CStr(ws.Cells(r, 1).value), product, vbTextCompare) = 0 Then
-            c.FT_Lo = CDbl(Val(ws.Cells(r, 2).value))
-            c.FT_Hi = CDbl(Val(ws.Cells(r, 3).value))
-            c.inHoldMin = CDbl(Val(ws.Cells(r, 4).value))
-            c.FT_Cross = CDbl(Val(ws.Cells(r, 5).value))
-            c.outHoldMin = CDbl(Val(ws.Cells(r, 6).value))
-            c.peakWinMin = CDbl(Val(ws.Cells(r, 7).value))
-            c.fallFrac = CDbl(Val(ws.Cells(r, 8).value))
-            c.FallHoldMin = CDbl(Val(ws.Cells(r, 9).value))
-            c.trimIn = CDbl(Val(ws.Cells(r, 10).value))
-            c.trimOut = CDbl(Val(ws.Cells(r, 11).value))
+            c.FT_Lo = CDbl(val(ws.Cells(r, 2).value))
+            c.FT_Hi = CDbl(val(ws.Cells(r, 3).value))
+            c.inHoldMin = CDbl(val(ws.Cells(r, 4).value))
+            c.FT_Cross = CDbl(val(ws.Cells(r, 5).value))
+            c.outHoldMin = CDbl(val(ws.Cells(r, 6).value))
+            c.peakWinMin = CDbl(val(ws.Cells(r, 7).value))
+            c.fallFrac = CDbl(val(ws.Cells(r, 8).value))
+            c.FallHoldMin = CDbl(val(ws.Cells(r, 9).value))
+            c.trimIn = CDbl(val(ws.Cells(r, 10).value))
+            c.trimOut = CDbl(val(ws.Cells(r, 11).value))
             LoadSoakCfg = True
             Exit Function
         End If
@@ -197,15 +210,15 @@ End Function
 
 Private Function LoadStripCfg(ws As Worksheet, ByVal product As String, ByRef c As StripCfg) As Boolean
     Dim r As Long, lastRow As Long
-    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    lastRow = ws.Cells(ws.rows.Count, 1).End(xlUp).Row
     For r = 2 To lastRow
         If StrComp(CStr(ws.Cells(r, 1).value), product, vbTextCompare) = 0 Then
-            c.PT_Thresh = CDbl(Val(ws.Cells(r, 2).value))
-            c.StartHoldMin = CDbl(Val(ws.Cells(r, 3).value))
-            c.DeltaFromStart = CDbl(Val(ws.Cells(r, 4).value))
-            c.EndHoldMin = CDbl(Val(ws.Cells(r, 5).value))
-            c.trimIn = CDbl(Val(ws.Cells(r, 6).value))
-            c.trimOut = CDbl(Val(ws.Cells(r, 7).value))
+            c.PT_Thresh = CDbl(val(ws.Cells(r, 2).value))
+            c.StartHoldMin = CDbl(val(ws.Cells(r, 3).value))
+            c.DeltaFromStart = CDbl(val(ws.Cells(r, 4).value))
+            c.EndHoldMin = CDbl(val(ws.Cells(r, 5).value))
+            c.trimIn = CDbl(val(ws.Cells(r, 6).value))
+            c.trimOut = CDbl(val(ws.Cells(r, 7).value))
             LoadStripCfg = True
             Exit Function
         End If
@@ -217,7 +230,7 @@ Private Function BuildHeaderIndex(ws As Worksheet) As Object
     Dim d As Object: Set d = CreateObject("Scripting.Dictionary")
     d.CompareMode = 1 'TextCompare
     Dim c As Range
-    For Each c In ws.Rows(1).Cells
+    For Each c In ws.rows(1).Cells
         If Len(c.Value2) = 0 Then Exit For
         d(CStr(c.Value2)) = c.Column
     Next c
@@ -244,22 +257,22 @@ Private Function GroupTagsByRole(wsMap As Worksheet, ByVal product As String, hd
     Set d(ROLE_FT) = New Collection
     Set d(ROLE_E3FT) = New Collection
 
-    Dim lastRow As Long: lastRow = wsMap.Cells(wsMap.Rows.Count, 1).End(xlUp).Row
+    Dim lastRow As Long: lastRow = wsMap.Cells(wsMap.rows.Count, 1).End(xlUp).Row
     Dim r As Long, prod$, tag$, role$
 
     For r = 2 To lastRow
         prod = Trim$(CStr(wsMap.Cells(r, 1).value))
-        If Len(prod) = 0 Then GoTo nextR
-        If StrComp(prod, product, vbTextCompare) <> 0 Then GoTo nextR
+        If Len(prod) = 0 Then GoTo NextR
+        If StrComp(prod, product, vbTextCompare) <> 0 Then GoTo NextR
 
         tag = Trim$(CStr(wsMap.Cells(r, 2).value))
-        If Len(tag) = 0 Then GoTo nextR
-        If HeaderCol(hdr, tag) = 0 Then GoTo nextR  ' require exact tag present in Paste Data
+        If Len(tag) = 0 Then GoTo NextR
+        If HeaderCol(hdr, tag) = 0 Then GoTo NextR  ' require exact tag present in Paste Data
 
         role = InferRole(tag)
         If d.Exists(role) Then d(role).Add tag
 
-nextR:
+NextR:
     Next r
 
     Set GroupTagsByRole = d
@@ -292,7 +305,7 @@ Private Sub WriteKOV(ByVal wsOut As Worksheet, ByVal product As String, roleTags
         .Cells.ClearContents
         ' Top summary block
         .Range("A1:F1").value = Array("Product", "Role", "Tags used", _
-                              "Redundancy (N)", "Redundancy (Max)", "Redundancy (StdDev)")
+                              "N", "Max", "StdDev")
         .Range("A2").value = product
         rr = 2
         rr = PrintRoleSummary(wsOut, rr, "TT", roleTags, nTT, dTT, vTT, product)
@@ -391,7 +404,7 @@ Private Function LimitVarUnits(ByVal product As String, ByVal stepName As String
     Dim ws As Worksheet, r As Long, lastRow As Long
     On Error Resume Next: Set ws = ThisWorkbook.Worksheets(SH_LIMITS): On Error GoTo 0
     If ws Is Nothing Then Exit Function
-    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    lastRow = ws.Cells(ws.rows.Count, 1).End(xlUp).Row
     For r = 2 To lastRow
         If StrComp(CStr(ws.Cells(r, 1).value), product, vbTextCompare) = 0 _
         And StrComp(CStr(ws.Cells(r, 2).value), stepName, vbTextCompare) = 0 _
@@ -451,15 +464,15 @@ Private Function GetLimit(ByVal product As String, ByVal stepName As String, ByV
     Dim ws As Worksheet, r As Long, lastRow As Long
     On Error Resume Next: Set ws = ThisWorkbook.Worksheets(SH_LIMITS): On Error GoTo 0
     If ws Is Nothing Then Exit Function
-    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    lastRow = ws.Cells(ws.rows.Count, 1).End(xlUp).Row
     For r = 2 To lastRow
         If StrComp(CStr(ws.Cells(r, 1).value), product, vbTextCompare) = 0 _
         And StrComp(CStr(ws.Cells(r, 2).value), stepName, vbTextCompare) = 0 _
         And InStr(1, LCase$(CStr(ws.Cells(r, 3).value)), LCase$(varKey)) > 0 Then
             vUnits = CStr(ws.Cells(r, 4).value)
-            vMin = CDbl(Val(ws.Cells(r, 5).value))
-            vTV = CDbl(Val(ws.Cells(r, 6).value))
-            vMax = CDbl(Val(ws.Cells(r, 7).value))
+            vMin = CDbl(val(ws.Cells(r, 5).value))
+            vTV = CDbl(val(ws.Cells(r, 6).value))
+            vMax = CDbl(val(ws.Cells(r, 7).value))
             vLabel = CStr(ws.Cells(r, 8).value)
             GetLimit = True
             Exit Function

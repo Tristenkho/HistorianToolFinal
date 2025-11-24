@@ -103,7 +103,7 @@ Public Sub KOV_Run_InnospecASA_Main()
 
     ' ---- output header ----
     wsK.Cells.ClearContents
-    wsK.Range("A1:F1").value = Array("Product", "Role", "Tags used", "Redundancy (N)", "Redundancy (Max)", "Redundancy (StdDev)")
+    wsK.Range("A1:F1").value = Array("Product", "Role", "Tags used", "N", "Max", "StdDev")
     wsK.Range("A2").value = PRODUCT_NAME
     Dim rr As Long: rr = 2
     rr = PrintRoleSummary(wsK, rr, ROLE_TT, roleTags, nTT, dTT, vTT, PRODUCT_NAME)
@@ -113,7 +113,7 @@ Public Sub KOV_Run_InnospecASA_Main()
     rr = PrintRoleSummary(wsK, rr, ROLE_MTT, roleTags, nMTT, dMTT, vMTT)
 
     rr = rr + 2
-    wsK.Rows(rr - 1).RowHeight = 8
+    wsK.rows(rr - 1).RowHeight = 8
     wsK.Range("A" & rr & ":L" & rr).value = Array("Stage", "Start Time", "End Time", _
                                                   "Metric", "Value", "Min", "TV", "Max", _
                                                   "Result", "# from TV", "Label", "Notes")
@@ -234,7 +234,7 @@ Private Function HeaderCol(hdr As Object, key As String) As Long
 End Function
 
 Private Function BuildTimeVector(ws As Worksheet, ByVal cTime As Long, ByRef t() As Double, ByRef n As Long) As Boolean
-    Dim lastRow As Long: lastRow = ws.Cells(ws.Rows.Count, cTime).End(xlUp).Row
+    Dim lastRow As Long: lastRow = ws.Cells(ws.rows.Count, cTime).End(xlUp).Row
     If lastRow < 3 Then Exit Function
     n = lastRow - 1
     ReDim t(1 To n)
@@ -269,7 +269,7 @@ Private Function GroupTagsByRole_Explicit(wsMap As Worksheet, ByVal product As S
     Set d(ROLE_MTT) = New Collection
     Set d(ROLE_CFT) = New Collection
 
-    Dim lastRow As Long: lastRow = wsMap.Cells(wsMap.Rows.Count, 1).End(xlUp).Row
+    Dim lastRow As Long: lastRow = wsMap.Cells(wsMap.rows.Count, 1).End(xlUp).Row
     Dim r As Long, prod$, tag$, role$, tagHeader$
 
     For r = 2 To lastRow

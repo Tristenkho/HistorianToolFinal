@@ -79,7 +79,7 @@ Private Sub Run_R4_OLI(ByVal PRODUCT_NAME As String, ByVal writeStripTTminmax As
 
     ' ---- output header ----
     wsK.Cells.ClearContents
-    wsK.Range("A1:F1").value = Array("Product", "Role", "Tags used", "Redundancy (N)", "Redundancy (Max)", "Redundancy (StdDev)")
+    wsK.Range("A1:F1").value = Array("Product", "Role", "Tags used", "N", "Max", "StdDev")
     wsK.Range("A2").value = PRODUCT_NAME
     Dim rr As Long: rr = 2
     rr = PrintRoleSummary(wsK, rr, ROLE_TT, roleTags, nTT, dTT, vTT, PRODUCT_NAME)
@@ -87,7 +87,7 @@ Private Sub Run_R4_OLI(ByVal PRODUCT_NAME As String, ByVal writeStripTTminmax As
     rr = PrintRoleSummary(wsK, rr, ROLE_FT, roleTags, nFT, dFT, vFT)
 
     rr = rr + 2
-    wsK.Rows(rr - 1).RowHeight = 8
+    wsK.rows(rr - 1).RowHeight = 8
     wsK.Range("A" & rr & ":L" & rr).value = Array("Stage", "Start Time", "End Time", "Metric", "Value", "Min", "TV", "Max", "Result", "# from TV", "Label", "Notes")
     wsK.Range("A" & rr & ":L" & rr).Font.Bold = True
     rr = rr + 1
@@ -134,7 +134,7 @@ Private Sub Run_R4_OLI(ByVal PRODUCT_NAME As String, ByVal writeStripTTminmax As
         rr = WriteRowOrNoLimit(wsK, rr, "Strip", t(iS_Start), t(iB_End), _
                                "Pressure (min) (psia)", Round(ptMin, 2), _
                                wsL, PRODUCT_NAME, "Strip", "Pressure (min)", False, _
-                               "Min PT during strip (PT<12?PT>12).")
+                               "Min PT during strip (PT<12 to PT>12).")
 
         If writeStripTTminmax Then
             ' For 9000M: TT min/max with 30-min trims on strip window
@@ -179,7 +179,7 @@ End Sub
 '=======================================================
 
 Private Function BuildTimeVector(ws As Worksheet, ByVal cTime As Long, ByRef t() As Double, ByRef n As Long) As Boolean
-    Dim lastRow As Long: lastRow = ws.Cells(ws.Rows.Count, cTime).End(xlUp).Row
+    Dim lastRow As Long: lastRow = ws.Cells(ws.rows.Count, cTime).End(xlUp).Row
     If lastRow < 3 Then Exit Function
     n = lastRow - 1
     ReDim t(1 To n)

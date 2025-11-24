@@ -15,7 +15,7 @@ Public Sub ResolveWindowBounds(ByRef t() As Double, ByRef i0 As Long, ByRef i1 A
 End Sub
 
 ' ----------------- public: generic range-limited detectors ------------
-Public Function FirstHold_InBand_Range(ByRef y() As Double, ByVal lo As Double, ByVal hi As Double, _
+Public Function FirstHold_InBand_Range(ByRef Y() As Double, ByVal lo As Double, ByVal hi As Double, _
                                        ByRef t() As Double, ByVal holdMin As Double, _
                                        ByVal iStart As Long, ByVal iEnd As Long) As Long
     Dim i As Long, dt As Double, acc As Double, startIdx As Long
@@ -24,7 +24,7 @@ Public Function FirstHold_InBand_Range(ByRef y() As Double, ByVal lo As Double, 
     startIdx = 0: acc = 0#
     For i = iStart To iEnd
         dt = MinutesBetween_KOVH(t(i - 1), t(i)): If dt < 0 Then dt = 0
-        If y(i) >= lo And y(i) <= hi Then
+        If Y(i) >= lo And Y(i) <= hi Then
             If startIdx = 0 Then startIdx = i
             acc = acc + dt
             If acc >= holdMin Then FirstHold_InBand_Range = startIdx: Exit Function
@@ -34,7 +34,7 @@ Public Function FirstHold_InBand_Range(ByRef y() As Double, ByVal lo As Double, 
     Next i
 End Function
 
-Public Function FirstHold_OutOfBand_Range(ByRef y() As Double, ByVal lo As Double, ByVal hi As Double, _
+Public Function FirstHold_OutOfBand_Range(ByRef Y() As Double, ByVal lo As Double, ByVal hi As Double, _
                                           ByRef t() As Double, ByVal iStart As Long, ByVal holdMin As Double, _
                                           ByVal iEnd As Long) As Long
     Dim i As Long, dt As Double, acc As Double, startIdx As Long
@@ -43,7 +43,7 @@ Public Function FirstHold_OutOfBand_Range(ByRef y() As Double, ByVal lo As Doubl
     startIdx = 0: acc = 0#
     For i = iStart To iEnd
         dt = MinutesBetween_KOVH(t(i - 1), t(i)): If dt < 0 Then dt = 0
-        If (y(i) <= lo) Or (y(i) >= hi) Then
+        If (Y(i) <= lo) Or (Y(i) >= hi) Then
             If startIdx = 0 Then startIdx = i
             acc = acc + dt
             If acc >= holdMin Then FirstHold_OutOfBand_Range = startIdx: Exit Function
@@ -53,7 +53,7 @@ Public Function FirstHold_OutOfBand_Range(ByRef y() As Double, ByVal lo As Doubl
     Next i
 End Function
 
-Public Function FirstHold_Single_Range(ByRef y() As Double, ByVal op As String, ByVal th As Double, _
+Public Function FirstHold_Single_Range(ByRef Y() As Double, ByVal op As String, ByVal th As Double, _
                                        ByRef t() As Double, ByVal iStart As Long, ByVal holdMin As Double, _
                                        ByVal iEnd As Long) As Long
     Dim i As Long, dt As Double, acc As Double, startIdx As Long, ok As Boolean
@@ -62,7 +62,7 @@ Public Function FirstHold_Single_Range(ByRef y() As Double, ByVal op As String, 
     startIdx = 0: acc = 0#
     For i = iStart To iEnd
         dt = MinutesBetween_KOVH(t(i - 1), t(i)): If dt < 0 Then dt = 0
-        ok = (op = "<=" And y(i) <= th) Or (op = ">=" And y(i) >= th)
+        ok = (op = "<=" And Y(i) <= th) Or (op = ">=" And Y(i) >= th)
         If ok Then
             If startIdx = 0 Then startIdx = i
             acc = acc + dt
@@ -264,32 +264,32 @@ End Function
 '==================== Back-compat shims (auto-apply window) ====================
 
 Public Function FirstHold_InBand( _
-    ByRef y() As Double, ByVal lo As Double, ByVal hi As Double, _
+    ByRef Y() As Double, ByVal lo As Double, ByVal hi As Double, _
     ByRef t() As Double, ByVal holdMin As Double) As Long
 
     Dim i0 As Long, i1 As Long
     ResolveWindowBounds t, i0, i1
-    FirstHold_InBand = FirstHold_InBand_Range(y, lo, hi, t, holdMin, i0, i1)
+    FirstHold_InBand = FirstHold_InBand_Range(Y, lo, hi, t, holdMin, i0, i1)
 End Function
 
 Public Function FirstHold_OutOfBand( _
-    ByRef y() As Double, ByVal lo As Double, ByVal hi As Double, _
+    ByRef Y() As Double, ByVal lo As Double, ByVal hi As Double, _
     ByRef t() As Double, ByVal iStart As Long, ByVal holdMin As Double) As Long
 
     Dim i0 As Long, i1 As Long
     ResolveWindowBounds t, i0, i1
     If iStart < i0 Then iStart = i0
-    FirstHold_OutOfBand = FirstHold_OutOfBand_Range(y, lo, hi, t, iStart, holdMin, i1)
+    FirstHold_OutOfBand = FirstHold_OutOfBand_Range(Y, lo, hi, t, iStart, holdMin, i1)
 End Function
 
 Public Function FirstHold_Single( _
-    ByRef y() As Double, ByVal op As String, ByVal th As Double, _
+    ByRef Y() As Double, ByVal op As String, ByVal th As Double, _
     ByRef t() As Double, ByVal iStart As Long, ByVal holdMin As Double) As Long
 
     Dim i0 As Long, i1 As Long
     ResolveWindowBounds t, i0, i1
     If iStart < i0 Then iStart = i0
-    FirstHold_Single = FirstHold_Single_Range(y, op, th, t, iStart, holdMin, i1)
+    FirstHold_Single = FirstHold_Single_Range(Y, op, th, t, iStart, holdMin, i1)
 End Function
 
 Public Function FirstHold_Dual( _

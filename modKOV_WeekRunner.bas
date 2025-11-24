@@ -1,4 +1,6 @@
 Attribute VB_Name = "modKOV_WeekRunner"
+Option Explicit
+
 Public Sub KOV_Run_FromBatchSummary()
     Dim wb As Workbook: Set wb = ThisWorkbook
     Dim wsBS As Worksheet, wsK As Worksheet, wsKM As Worksheet
@@ -7,18 +9,10 @@ Public Sub KOV_Run_FromBatchSummary()
     Set wsBS = wb.Worksheets("Batch Summary")
     Set wsK = wb.Worksheets("KOV")
     On Error GoTo 0
+    If wsBS Is Nothing Then MsgBox "Batch Summary not found.", vbExclamation: Exit Sub
+    If wsK Is Nothing Then MsgBox "KOV sheet not found.", vbExclamation: Exit Sub
 
-    ' Show fatal errors (not silenced)
-    If wsBS Is Nothing Then
-        MsgBox "Batch Summary not found.", vbExclamation
-        Exit Sub
-    End If
-    If wsK Is Nothing Then
-        MsgBox "KOV sheet not found.", vbExclamation
-        Exit Sub
-    End If
-
-    ' Create/clear KOV Multi
+    ' Create/clear consolidated output
     On Error Resume Next
     Set wsKM = wb.Worksheets("KOV Multi")
     On Error GoTo 0
@@ -32,10 +26,10 @@ Public Sub KOV_Run_FromBatchSummary()
     wsKM.Range("A1").Font.Bold = True
     Dim outRow As Long: outRow = 3
 
-    Dim lastRow As Long: lastRow = wsBS.Cells(wsBS.Rows.Count, 1).End(xlUp).Row
+    Dim lastRow As Long: lastRow = wsBS.Cells(wsBS.rows.Count, 1).End(xlUp).Row
     Dim r As Long
 
-    ' Silence per-batch popups only during the loop
+    ' Silence per-batch to avoid popups, show progress in status bar
     Dim wasSilent As Boolean: wasSilent = G_KOV_Silent
     G_KOV_Silent = True
     Application.ScreenUpdating = False
@@ -44,24 +38,20 @@ Public Sub KOV_Run_FromBatchSummary()
         Dim tag As String, prod As String
         Dim st As Variant, en As Variant
 
-        tag = Trim$(CStr(wsBS.Cells(r, 1).value))   ' Tag
-        st = wsBS.Cells(r, 2).value                 ' Batch Start
-        en = wsBS.Cells(r, 3).value                 ' Batch End
-        prod = Trim$(CStr(wsBS.Cells(r, 7).value))  ' Product (col G)
+        tag = Trim$(CStr(wsBS.Cells(r, 1).value))
+        st = wsBS.Cells(r, 2).value
+        en = wsBS.Cells(r, 3).value
+        prod = Trim$(CStr(wsBS.Cells(r, 7).value))
 
-        If Len(prod) = 0 Then GoTo nextR
-        If Not IsDate(st) Or Not IsDate(en) Then GoTo nextR
+        If Len(prod) = 0 Or Not IsDate(st) Or Not IsDate(en) Then GoTo NextR
 
-        ' Local window (also used for header text)
-        Dim winStart As Double, winEnd As Double
-        winStart = CDbl(st) - (1# / 24#)    ' 1h pre-start buffer
-        winEnd = CDbl(en)
+        Application.StatusBar = "KOV running " & prod & " (row " & r & ")..."
 
-        ' Set globals for product runners
-        KOV_SetWindow winStart, winEnd
+        ' Set window per batch
+        KOV_SetWindow CDbl(st) - (1# / 24#), CDbl(en)
         G_SELECTED_PRODUCT = prod
 
-        ' Clear KOV sheet before each run
+        ' Clear KOV sheet used area
         With wsK
             .Cells.Clear
             .Cells.FormatConditions.Delete
@@ -69,64 +59,74 @@ Public Sub KOV_Run_FromBatchSummary()
             .Cells.Borders.LineStyle = xlNone
         End With
 
-        ' Dispatch to product KOV
-        Dim tgt As String
-        Select Case UCase$(Replace(prod, " ", ""))
-            Case "LUBRIZOL198.58", "198.58": tgt = "'" & wb.name & "'!KOV_Run_Lubrizol19858_Main"
-            Case "INFINEUMC9242", "C9242":   tgt = "'" & wb.name & "'!KOV_Run_InfineumC9242_Main"
-            Case "INFINEUMC9402", "C9402":   tgt = "'" & wb.name & "'!KOV_Run_v2_Main"
-            Case "INFINEUMC9411", "C9411":   tgt = "'" & wb.name & "'!KOV_Run_v2_Main"
-            Case "INNOSPECASA", "ASA":       tgt = "'" & wb.name & "'!KOV_Run_InnospecASA_Main"
-            Case "INFINEUMC9412", "C9412":   tgt = "'" & wb.name & "'!KOV_Run_InfineumC9412_Main"
-            Case "LUBRIZOL0276.6", "0276.6": tgt = "'" & wb.name & "'!KOV_Run_Lubrizol02766_Main"
-            Case "INFINEUMC9283", "C9283":   tgt = "'" & wb.name & "'!KOV_Run_InfineumC9283_Main"
-            Case "LUBRIZOL116.58", "116.58": tgt = "'" & wb.name & "'!KOV_Run_Lubrizol11658_Main"
-            Case "INNOSPECOLI9000M", "OLI9000M":   tgt = "'" & wb.name & "'!KOV_Run_InnospecOLI9000M_Main"
-            Case "INNOSPECOLI9200LN", "OLI9200LN": tgt = "'" & wb.name & "'!KOV_Run_InnospecOLI9200LN_Main"
-            Case Else: tgt = ""
-        End Select
-        If Len(tgt) > 0 Then
-            Application.Run tgt
+        ' Dispatch (errors trapped per-row)
+        On Error Resume Next
+        Application.Run DispatchTargetFor(prod)
+        If Err.Number <> 0 Then
+            Err.Clear
+            On Error GoTo 0
+            GoTo NextR
         End If
+        On Error GoTo 0
 
-afterRun:
-        ' Copy latest KOV into consolidated sheet
+        ' Copy latest KOV into consolidated
         Dim used As Range
         Set used = wsK.UsedRange
 
         wsKM.Cells(outRow, 1).value = "Row " & r & " | " & prod & _
-            " | Window: " & Format(winStart, "m/d/yyyy hh:mm") & " – " & _
-            Format(winEnd, "m/d/yyyy hh:mm") & IIf(Len(tag) > 0, " | Tag: " & tag, "")
+            " | Window: " & Format(CDbl(st) - (1# / 24#), "m/d/yyyy hh:mm") & " – " & _
+            Format(CDbl(en), "m/d/yyyy hh:mm") & IIf(Len(tag) > 0, " | Tag: " & tag, "")
         wsKM.Cells(outRow, 1).Font.Bold = True
         outRow = outRow + 1
 
         If Not used Is Nothing Then
             If Application.WorksheetFunction.CountA(used) > 0 Then
                 used.Copy wsKM.Cells(outRow, 1)
-                outRow = outRow + used.Rows.Count + 2
+                outRow = outRow + used.rows.Count + 2
                 Application.CutCopyMode = False
             Else
                 outRow = outRow + 1
             End If
         End If
 
-        ' Reset globals for next row
+        ' Reset for next
         G_SELECTED_PRODUCT = vbNullString
         KOV_ClearWindow
 
-nextR:
+NextR:
     Next r
 
     KOV_ColorizeAllTables wsKM
     wsKM.Columns("A:L").AutoFit
 
-    ' restore UI state and notify once
+    ' restore UI and notify once
     Application.ScreenUpdating = True
+    Application.StatusBar = False
     G_KOV_Silent = wasSilent
     KOV_Notify "KOV Multi complete (see 'KOV Multi')."
 End Sub
 
-Sub R4_Run_KOV_For_Week()
-    KOV_Run_FromBatchSummary
-End Sub
+' Small helper to build the Application.Run target string for a product name
+Private Function DispatchTargetFor(ByVal prod As String) As String
+    Dim key As String
+    key = UCase$(Replace(Replace(prod, " ", ""), ".", "")) ' normalize e.g., "116.58"
+
+    Dim wbName As String: wbName = ThisWorkbook.name
+    Select Case key
+        Case "LUBRIZOL19858", "19858":          DispatchTargetFor = "'" & wbName & "'!KOV_Run_Lubrizol19858_Main"
+        Case "INFINEUMC9242", "C9242":          DispatchTargetFor = "'" & wbName & "'!KOV_Run_InfineumC9242_Main"
+        Case "INFINEUMC9402", "C9402":          DispatchTargetFor = "'" & wbName & "'!KOV_Run_v2_Main"
+        Case "INFINEUMC9411", "C9411":          DispatchTargetFor = "'" & wbName & "'!KOV_Run_v2_Main"
+        Case "INNOSPECASA", "ASA":              DispatchTargetFor = "'" & wbName & "'!KOV_Run_InnospecASA_Main"
+        Case "INFINEUMC9412", "C9412":          DispatchTargetFor = "'" & wbName & "'!KOV_Run_InfineumC9412_Main"
+        Case "LUBRIZOL02766", "02766":          DispatchTargetFor = "'" & wbName & "'!KOV_Run_Lubrizol02766_Main"
+        Case "INFINEUMC9283", "C9283":          DispatchTargetFor = "'" & wbName & "'!KOV_Run_InfineumC9283_Main"
+        Case "LUBRIZOL11658", "11658":          DispatchTargetFor = "'" & wbName & "'!KOV_Run_Lubrizol11658_Main"
+        Case "INNOSPECOLI9000M", "OLI9000M":    DispatchTargetFor = "'" & wbName & "'!KOV_Run_InnospecOLI9000M_Main"
+        Case "INNOSPECOLI9200LN", "OLI9200LN":  DispatchTargetFor = "'" & wbName & "'!KOV_Run_InnospecOLI9200LN_Main"
+        Case Else
+            DispatchTargetFor = "'" & wbName & "'!KOV_Run_v2_Main" ' safe default
+    End Select
+End Function
+
 
