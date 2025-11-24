@@ -1,6 +1,6 @@
 Attribute VB_Name = "GraphAutomation"
 '==========================
-' Graphs Module (3-column grid) — X axis in hours (0 start)
+' Graphs Module (3-column grid) â€” X axis in hours (0 start)
 ' Major ticks every 12 hr; minor ticks every 6 hr; no minor gridlines
 '==========================
 Option Explicit
